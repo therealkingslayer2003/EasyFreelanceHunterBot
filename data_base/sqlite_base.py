@@ -22,9 +22,8 @@ async def sql_add(state):
         try:
             cur.execute('INSERT INTO settings VALUES(?, ?, ?, ?, ?, ?, ?, ?)', tuple(data.values()))
             base.commit()
-        except "UNIQUE constraint failed: settings.user_id":
-            print("YES")
-            base.execute('DELETE FROM settings WHERE user_id = ?', (data[0]))
+        except sqlite3.IntegrityError:
+            cur.execute('DELETE FROM settings WHERE user_id == ?', (data["user_id"],))
             base.commit()
             cur.execute('INSERT INTO settings VALUES(?, ?, ?, ?, ?, ?, ?, ?)', tuple(data.values()))
             base.commit()
@@ -32,7 +31,7 @@ async def sql_add(state):
 
 # Получение значений
 def sql_get(user_id):
-    data = cur.execute("SELECT * FROM settings").fetchone()
+    data = cur.execute("SELECT * FROM settings WHERE user_id == ?", (user_id,)).fetchone()
     info = {
         "user_id": data[0],
         "sites": data[1].split(";"),
