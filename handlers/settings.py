@@ -3,12 +3,10 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import CallbackQuery
 
-from create_bot import bot
-from data_base import sqlite_base
-from keyboards.settings import sites_kb, categories_kb, mode_kb
+from keyboards.settings import sites_kb, categories_kb, mode_kb, keywords_kb
+from utils import edited, is_valid
 
 
-# машина состояний
 class StatesMachine(StatesGroup):
     waiting_for_sites = State()
     waiting_for_categories = State()
@@ -38,6 +36,7 @@ async def choose_sites(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     chosen_sites = (await state.get_data())["chosen_sites"]
 
+    # при нажатии на сайт
     if callback.data.startswith("chosen"):
         if callback.data.replace("chosen ", "") in chosen_sites:
             chosen_sites.remove(callback.data.replace("chosen ", ""))
@@ -45,6 +44,7 @@ async def choose_sites(callback: CallbackQuery, state: FSMContext):
             chosen_sites.append(callback.data.replace("chosen ", ""))
         await state.update_data(chosen_sites=chosen_sites)
 
+    # при нажатии "дальше"
     elif callback.data == "step_ahead":
         callback.data = "first_start"
         await StatesMachine.next()
@@ -113,7 +113,49 @@ async def choose_mode(callback: CallbackQuery, state: FSMContext):
 
 
 async def choose_keywords(callback: CallbackQuery, state: FSMContext):
-    pass
+    # первый запуск функции
+    if type(callback) == CallbackQuery:
+        if callback.data == "first_start":
+            await state.update_data(keywords=[])
+            keywords = (await state.get_data())["keywords"]
+            text = ''
+            message_id = \
+                await callback.message.edit_text(f"Напишите ключевые слова:\n\n💡 Используйте слова или словосочетания"
+                                                 f" без спецсимволов\. Только буквы, цифры и пробелы\n💡 Для добавления "
+                                                 f"отправьте каждое ключевое слово отдельным сообщением\.\n"
+                                                 f"💡 Для удаления отправьте ключевое слово, которое хотите удалить\n\n"
+                                                 f"Ваши ключевые слова:\n*{text}*", parse_mode="MarkDownV2",
+                                                 reply_markup=keywords_kb)
+
+            await state.update_data(message_id=message_id)
+        elif callback.data == "step_ahead":
+            callback.data = "first_start"
+            await StatesMachine.next()
+            await choose_prices(callback, state)
+            return
+    else:
+        message_id = (await state.get_data())["message_id"]
+        keywords = (await state.get_data())["keywords"]
+        if not is_valid(callback.text):
+            await callback.delete()
+            return
+        if callback.text in keywords:
+            keywords.remove(callback.text)
+        else:
+            keywords.append(callback.text)
+        await state.update_data(keywords=keywords)
+        await callback.delete()
+
+        text = ''
+        for word in keywords:
+            text += "🔘 " + word + "\n"
+
+        await message_id.edit_text(f"Напишите ключевые слова:\n\n💡 Используйте слова или словосочетания"
+                                   f" без спецсимволов\. Только буквы, цифры и пробелы\n💡 Для добавления "
+                                   f"отправьте каждое ключевое слово отдельным сообщением\.\n"
+                                   f"💡 Для удаления отправьте ключевое слово, которое хотите удалить\n\n"
+                                   f"Ваши ключевые слова:\n*{text}*", parse_mode="MarkDownV2",
+                                   reply_markup=keywords_kb)
 
 
 async def choose_prices(callback: CallbackQuery, state: FSMContext):
@@ -126,6 +168,7 @@ async def choose_responses(callback: CallbackQuery, state: FSMContext):
 
 async def choose_frequency(callback: CallbackQuery, state: FSMContext):
     pass
+
 
 # Регистрация хендлеров
 def register_handlers_settings(dp: Dispatcher):
@@ -140,4 +183,8 @@ def register_handlers_settings(dp: Dispatcher):
     dp.register_callback_query_handler(choose_mode,
                                        lambda call: call.data.startswith("chosen") or call.data == "step_ahead",
                                        state=StatesMachine.waiting_for_mode)
-
+    dp.register_callback_query_handler(choose_keywords,
+                                       lambda call: call.data == "step_ahead",
+                                       state=StatesMachine.waiting_for_keywords)
+    dp.register_message_handler(choose_keywords,
+                                state=StatesMachine.waiting_for_keywords)

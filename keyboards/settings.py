@@ -43,3 +43,6 @@ def mode_kb(selected_mode):
     keyboard.row(button_previous, button_next)
 
     return keyboard
+
+
+keywords_kb = InlineKeyboardMarkup(row_width=2).add(button_previous, button_next)

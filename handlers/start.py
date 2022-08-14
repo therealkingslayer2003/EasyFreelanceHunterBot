@@ -1,7 +1,6 @@
 from aiogram import types, Dispatcher
 
 from create_bot import bot
-from handlers.settings import setup_settings
 from keyboards.start import start_new_user_kb, start_old_user_KB
 from data_base import sqlite_base
 
