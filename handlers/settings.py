@@ -101,48 +101,31 @@ async def choose_mode(callback: CallbackQuery, state: FSMContext):
 
     elif callback.data == "step_ahead":
         callback.data = "first_start"
-        await StatesMachine.next()
-        await choose_categories(callback, state)
+        if mode == "keywords":
+            await StatesMachine.next()
+            await choose_keywords(callback, state)
+        else:
+            await StatesMachine.waiting_for_prices.set()
+            await choose_prices(callback, state)
         return
 
     await callback.message.edit_text("Выберите режим:", reply_markup=mode_kb(mode))
 
-# # выбор режима
-# async def choose_mode(callback: CallbackQuery, state: FSMContext):
-#     await state.update_data(mode=message.text)
-#     await calmessage.from_user.id, "Выберите ключевые слова:")
-#     await StatesMachine.next()
+
+async def choose_keywords(callback: CallbackQuery, state: FSMContext):
+    pass
 
 
-# выбор ключевых слов
-async def choose_keywords(message: types.Message, state: FSMContext):
-    await state.update_data(keywords=message.text)
-    await bot.send_message(message.from_user.id, "Выберите ценовой диапазон:")
-    await StatesMachine.next()
+async def choose_prices(callback: CallbackQuery, state: FSMContext):
+    pass
 
 
-# выбор ценового диапазона
-async def choose_prices(message: types.Message, state: FSMContext):
-    await state.update_data(prices=message.text)
-    await bot.send_message(message.from_user.id, "Выберите кол-во откликов:")
-    await StatesMachine.next()
+async def choose_responses(callback: CallbackQuery, state: FSMContext):
+    pass
 
 
-# выбор кол-ва откликов
-async def choose_responses(message: types.Message, state: FSMContext):
-    await state.update_data(responses=message.text)
-    await bot.send_message(message.from_user.id, "Выберите частоту сообщений:")
-    await StatesMachine.next()
-
-
-# выбор частоты сообщений
-# уведомление об завершении настройки. Добавление данных в БД
-async def choose_frequency(message: types.Message, state: FSMContext):
-    await state.update_data(frequency=message.text)
-    await sqlite_base.sql_add(state)
-    await message.answer("Successfully!")
-    await state.finish()
-
+async def choose_frequency(callback: CallbackQuery, state: FSMContext):
+    pass
 
 # Регистрация хендлеров
 def register_handlers_settings(dp: Dispatcher):
@@ -157,7 +140,4 @@ def register_handlers_settings(dp: Dispatcher):
     dp.register_callback_query_handler(choose_mode,
                                        lambda call: call.data.startswith("chosen") or call.data == "step_ahead",
                                        state=StatesMachine.waiting_for_mode)
-    dp.register_message_handler(choose_keywords, state=StatesMachine.waiting_for_keywords)
-    dp.register_message_handler(choose_prices, state=StatesMachine.waiting_for_prices)
-    dp.register_message_handler(choose_responses, state=StatesMachine.waiting_for_responses)
-    dp.register_message_handler(choose_frequency, state=StatesMachine.waiting_for_frequency)
+
