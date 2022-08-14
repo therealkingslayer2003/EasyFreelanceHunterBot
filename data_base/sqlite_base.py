@@ -31,7 +31,9 @@ async def sql_add(state):
 
 # Получение значений
 def sql_get(user_id):
-    data = cur.execute("SELECT * FROM settings WHERE user_id == ?", (user_id,)).fetchone()
+    data = cur.execute("SELECT * FROM settings WHERE user_id == ?", (str(user_id),)).fetchone()
+    if not data:
+        return False
     info = {
         "user_id": data[0],
         "sites": data[1].split(";"),

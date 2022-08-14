@@ -5,6 +5,7 @@ from data_base import sqlite_base
 from create_bot import bot, StatesMachine
 
 
+# начало настройки
 async def setup_settings(message: types.Message):
     await bot.send_message(message.from_user.id, "Выберите сайты:")
     await StatesMachine.waiting_for_sites.set()
@@ -64,6 +65,7 @@ async def choose_frequency(message: types.Message, state: FSMContext):
 
 # Регистрация хендлеров
 def register_handlers_settings(dp: Dispatcher):
+    dp.register_callback_query_handler(setup_settings, text="start_settings")
     dp.register_message_handler(choose_sites, state=StatesMachine.waiting_for_sites)
     dp.register_message_handler(choose_categories, state=StatesMachine.waiting_for_categories)
     dp.register_message_handler(choose_mode, state=StatesMachine.waiting_for_mode)
