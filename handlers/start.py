@@ -1,12 +1,16 @@
 from aiogram import types, Dispatcher
+from aiogram.dispatcher import FSMContext
 
 from create_bot import bot
-from keyboards.start import start_new_user_kb, start_old_user_KB
 from data_base import sqlite_base
+from keyboards.start import start_new_user_kb, start_old_user_KB
 
 
 # команда старт
-async def command_start(message: types.Message):
+async def command_start(message: types.Message, state: FSMContext):
+    if (await state.get_state()) is not None:
+        await state.finish()
+
     start_text = f"*Добро пожаловать, {message.from_user.full_name} 🚀*\n\nС помощью этого бота ты сможешь с лёгкостью " \
                  f"искать заказы сразу на всех фриланс биражах, используя фильтры и ключевые слова\.\n" \
                  f"Для корректной работы бота нужно пройти начальную настройку ⬇️"
@@ -23,4 +27,4 @@ async def command_start(message: types.Message):
 
 
 def register_handlers_start(dp: Dispatcher):
-    dp.register_message_handler(command_start, commands=["start", "help"])
+    dp.register_message_handler(command_start, commands=["start", "help"], state="*")
