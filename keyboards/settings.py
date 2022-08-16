@@ -1,5 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from data import SITES, CATEGORIES
+from data import SITES, CATEGORIES, CURRENCIES, CURRENCIES_SIGNS
 
 button_next = InlineKeyboardButton(text="Дальше ➡️", callback_data="step_ahead")
 button_previous = InlineKeyboardButton(text="⬅️ Назад", callback_data="step_back")
@@ -18,11 +18,11 @@ def sites_kb(list_of_chosen_sites):
     return keyboard
 
 
-def categories_kb(list_of_chosen_categories):
+def categories_kb(chosen_category):
     keyboard = InlineKeyboardMarkup(row_width=2)
 
     for category in CATEGORIES:
-        if category in list_of_chosen_categories:
+        if category == chosen_category:
             keyboard.insert(InlineKeyboardButton(text=f"{category} 🟢", callback_data=f"chosen {category}"))
         else:
             keyboard.insert(InlineKeyboardButton(text=f"{category} 🔴", callback_data=f"chosen {category}"))
@@ -46,3 +46,18 @@ def mode_kb(selected_mode):
 
 
 keywords_kb = InlineKeyboardMarkup(row_width=2).add(button_previous, button_next)
+
+
+def currency_kb(selected_currency):
+    keyboard = InlineKeyboardMarkup(row_width=2)
+
+    for currency in CURRENCIES:
+        if currency == selected_currency:
+            keyboard.insert(InlineKeyboardButton(text=f"🟩  {currency}  {CURRENCIES_SIGNS.get(currency)}  🟩",
+                                                 callback_data=f"chosen {currency}"))
+        else:
+            keyboard.insert(InlineKeyboardButton(text=f"{currency}  {CURRENCIES_SIGNS.get(currency)}",
+                                                 callback_data=f"chosen {currency}"))
+    keyboard.add(button_previous, button_next)
+
+    return keyboard
