@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from data import SITES, CATEGORIES, CURRENCIES, CURRENCIES_SIGNS
 
+# кнопки для навигации
 button_next = InlineKeyboardButton(text="Дальше ➡️", callback_data="step_ahead")
 button_previous = InlineKeyboardButton(text="⬅️ Назад", callback_data="step_back")
 
