@@ -3,7 +3,8 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import CallbackQuery
 
-from keyboards.settings import sites_kb, categories_kb, mode_kb, keywords_kb, currency_kb
+from keyboards.settings import sites_kb, categories_kb, mode_kb, currency_kb, settings_default_kb, prices_kb, \
+    responses_kb
 from utils import edited, is_valid
 
 
@@ -116,15 +117,13 @@ async def choose_keywords(callback, state: FSMContext):
     if type(callback) == CallbackQuery:
         if callback.data == "first_start":
             await state.update_data(keywords=[])
-            keywords = (await state.get_data())["keywords"]
-            text = ''
             message_id = \
                 await callback.message.edit_text(f"Напишите ключевые слова:\n\n💡 Используйте слова или словосочетания"
-                                                 f" без спецсимволов\. Только буквы, цифры и пробелы\n💡 Для добавления "
-                                                 f"отправьте каждое ключевое слово отдельным сообщением\.\n"
+                                                 f" без спецсимволов\. Только буквы, цифры и пробелы\n\n💡 Для добавления "
+                                                 f"отправьте каждое ключевое слово отдельным сообщением\.\n\n"
                                                  f"💡 Для удаления отправьте ключевое слово, которое хотите удалить\n\n"
-                                                 f"Ваши ключевые слова:\n*{text}*", parse_mode="MarkDownV2",
-                                                 reply_markup=keywords_kb)
+                                                 f"Ваши ключевые слова:\n", parse_mode="MarkDownV2",
+                                                 reply_markup=settings_default_kb)
 
             await state.update_data(message_id=message_id)
         elif callback.data == "step_ahead":
@@ -151,11 +150,11 @@ async def choose_keywords(callback, state: FSMContext):
             text += "🔘 " + word + "\n"
 
         await message_id.edit_text(f"Напишите ключевые слова:\n\n💡 Используйте слова или словосочетания"
-                                   f" без спецсимволов\. Только буквы, цифры и пробелы\n💡 Для добавления "
-                                   f"отправьте каждое ключевое слово отдельным сообщением\.\n"
+                                   f" без спецсимволов\. Только буквы, цифры и пробелы\n\n💡 Для добавления "
+                                   f"отправьте каждое ключевое слово отдельным сообщением\.\n\n"
                                    f"💡 Для удаления отправьте ключевое слово, которое хотите удалить\n\n"
                                    f"Ваши ключевые слова:\n*{text}*", parse_mode="MarkDownV2",
-                                   reply_markup=keywords_kb)
+                                   reply_markup=settings_default_kb)
 
 
 async def choose_currency(callback: CallbackQuery, state: FSMContext):
@@ -184,19 +183,64 @@ async def choose_currency(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.edit_text("Выберите валюту, в которой будут отображаться заказы:\n\n"
                                      "💡 При отображении заказов с различных фриланс бирж, цена будет конвертироваться "
-                                     "в выбранную вами валюту по актуальному курсу\.\n"
+                                     "в выбранную вами валюту по актуальному курсу\.\n\n"
                                      "💡 Мы используем официальные курсы валют из доверенного и всемирно признанного"
                                      " [источника](https://www.xe.com/company/)\.", disable_web_page_preview=True,
                                      parse_mode="MarkDownV2",
                                      reply_markup=currency_kb(chosen_currency))
 
 
-async def choose_prices(callback: CallbackQuery, state: FSMContext):
-    pass
+async def choose_prices(callback, state: FSMContext):
+    if type(callback) == CallbackQuery:
+        if callback.data == "first_start":
+            await state.update_data(prices=[None, None])
+
+            message_id = \
+                await callback.message.edit_text(f"Напишите ценовой диапазон поиска заказов:\n\n💡 Вам будут показаны "
+                                                 f"заказы только в выбранном вам ценновом диапазоне\. Для отображения "
+                                                 f"заказов с любой ценой нажмите соотвествующую кнопку снизу\.\n\n"
+                                                 f"💡 Для добавления минимальной цены заказа напишите \"от \*цена\*\" и"
+                                                 f" отправьте данное сообщение боту\.\n*Например:*\n_от 500_\n\n"
+                                                 f"💡 Для добавления маскимальной цены заказа напишите \"до \*цена\*\" и"
+                                                 f" отправьте данное сообщение боту\.\n*Например:*\n_до 5000_\n\n"
+                                                 f"*Выбранный вами ценовой диапазон:*\nОтображать заказы с любой ценой ✅",
+                                                 parse_mode="MarkDownV2",
+                                                 reply_markup=prices_kb)
+        elif callback.data == "step_ahead":
+            callback.data = "first_start"
+            await StatesMachine.next()
+            await choose_responses(callback, state)
+            return
+
+    else:
+        pass
 
 
 async def choose_responses(callback: CallbackQuery, state: FSMContext):
-    pass
+    if type(callback) == CallbackQuery:
+        if callback.data == "first_start":
+            await state.update_data(responses=None)
+
+            message_id = \
+                await callback.message.edit_text(f"Напишите максимальное количество откликов :\n\n💡 Вам *НЕ* будут "
+                                                 f"показаны заказы, в которых количество откликов превышает выбранное"
+                                                 f"Вами значение\. Для отображения заказов с любым количеством откликов"
+                                                 f" нажмите соотвествующую кнопку снизу\.\n\n"
+                                                 f"💡 Для добавления маскимального количества откликов отправьте"
+                                                 f" сообщение боту, содержащее максимальное число откликов\."
+                                                 f"\n*Например:*\n7\n\n"
+                                                 f"*Выбранное Вами максимальное значение:*\n"
+                                                 f"Отображать заказы с любым количеством откликов ✅",
+                                                 parse_mode="MarkDownV2",
+                                                 reply_markup=responses_kb)
+        elif callback.data == "step_ahead":
+            callback.data = "first_start"
+            await StatesMachine.next()
+            await choose_frequency(callback, state)
+            return
+
+    else:
+        pass
 
 
 async def choose_frequency(callback: CallbackQuery, state: FSMContext):
@@ -224,3 +268,13 @@ def register_handlers_settings(dp: Dispatcher):
     dp.register_callback_query_handler(choose_currency,
                                        lambda call: call.data.startswith("chosen") or call.data == "step_ahead",
                                        state=StatesMachine.waiting_for_currency)
+    dp.register_callback_query_handler(choose_prices,
+                                       lambda call: call.data == "step_ahead",
+                                       state=StatesMachine.waiting_for_prices)
+    dp.register_message_handler(choose_prices,
+                                state=StatesMachine.waiting_for_prices)
+    dp.register_callback_query_handler(choose_responses,
+                                       lambda call: call.data == "step_ahead",
+                                       state=StatesMachine.waiting_for_responses)
+    dp.register_message_handler(choose_responses,
+                                state=StatesMachine.waiting_for_responses)

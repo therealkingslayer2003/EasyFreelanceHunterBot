@@ -46,7 +46,7 @@ def mode_kb(selected_mode):
     return keyboard
 
 
-keywords_kb = InlineKeyboardMarkup(row_width=2).add(button_previous, button_next)
+settings_default_kb = InlineKeyboardMarkup(row_width=2).add(button_previous, button_next)
 
 
 def currency_kb(selected_currency):
@@ -62,3 +62,11 @@ def currency_kb(selected_currency):
     keyboard.add(button_previous, button_next)
 
     return keyboard
+
+
+any_prices_button = InlineKeyboardButton(text="Отображать заказы с любой ценой ✅", callback_data="chosen any")
+prices_kb = InlineKeyboardMarkup().add(any_prices_button).add(button_previous, button_next)
+
+any_responses_button = InlineKeyboardButton(text="Отображать заказы с любым кол-вом откликов ✅", callback_data="chosen any")
+responses_kb = InlineKeyboardMarkup().add(any_responses_button).add(button_previous, button_next)
+
