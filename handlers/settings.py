@@ -11,12 +11,10 @@ from utils import edited, is_valid
 class StatesMachine(StatesGroup):
     waiting_for_sites = State()
     waiting_for_categories = State()
-    waiting_for_mode = State()
     waiting_for_keywords = State()
     waiting_for_currency = State()
     waiting_for_prices = State()
     waiting_for_responses = State()
-    waiting_for_frequency = State()
     active_searching = State()
 
 
@@ -241,10 +239,6 @@ async def choose_responses(callback: CallbackQuery, state: FSMContext):
 
     else:
         pass
-
-
-async def choose_frequency(callback: CallbackQuery, state: FSMContext):
-    pass
 
 
 # Регистрация хендлеров
