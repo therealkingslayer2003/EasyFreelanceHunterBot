@@ -4,6 +4,7 @@ from data import SITES, CATEGORIES, CURRENCIES, CURRENCIES_SIGNS
 # кнопки для навигации
 button_next = InlineKeyboardButton(text="Дальше ➡️", callback_data="step_ahead")
 button_previous = InlineKeyboardButton(text="⬅️ Назад", callback_data="step_back")
+button_done = InlineKeyboardButton(text="Готово ✅", callback_data="setting_done")
 
 
 def sites_kb(list_of_chosen_sites):
@@ -32,20 +33,6 @@ def categories_kb(chosen_category):
     return keyboard
 
 
-def mode_kb(selected_mode):
-    keyboard = InlineKeyboardMarkup(row_width=1)
-
-    if selected_mode == "basic":
-        keyboard.insert(InlineKeyboardButton(text="Поиск по ключевым словам", callback_data="chosen keywords"))
-        keyboard.insert(InlineKeyboardButton(text="🟩              Обычный поиск              🟩", callback_data="chosen basic"))
-    else:
-        keyboard.insert(InlineKeyboardButton(text="🟩 Поиск по ключевым словам  🟩", callback_data="chosen keywords"))
-        keyboard.insert(InlineKeyboardButton(text="Обычный поиск", callback_data="chosen basic"))
-    keyboard.row(button_previous, button_next)
-
-    return keyboard
-
-
 settings_default_kb = InlineKeyboardMarkup(row_width=2).add(button_previous, button_next)
 
 
@@ -64,9 +51,9 @@ def currency_kb(selected_currency):
     return keyboard
 
 
-any_prices_button = InlineKeyboardButton(text="Отображать заказы с любой ценой ✅", callback_data="chosen any")
+any_prices_button = InlineKeyboardButton(text="Отображать заказы с любой ценой ✅", callback_data="chosen_any")
 prices_kb = InlineKeyboardMarkup().add(any_prices_button).add(button_previous, button_next)
 
-any_responses_button = InlineKeyboardButton(text="Отображать заказы с любым кол-вом откликов ✅", callback_data="chosen any")
-responses_kb = InlineKeyboardMarkup().add(any_responses_button).add(button_previous, button_next)
+any_responses_button = InlineKeyboardButton(text="Отображать заказы с любым кол-вом откликов ✅", callback_data="chosen_any")
+responses_kb = InlineKeyboardMarkup().add(any_responses_button).add(button_previous, button_done)
 
