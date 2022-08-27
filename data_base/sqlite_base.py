@@ -29,9 +29,14 @@ async def sql_add(state):
             base.commit()
 
 
-# Получение значений
+# Получение значений. Если пользователя нет в БД, возвращает False
 def sql_get(user_id):
-    data = cur.execute("SELECT * FROM settings WHERE user_id == ?", (user_id,)).fetchone()
+    data = cur.execute("SELECT * FROM settings WHERE user_id == ?", (str(user_id),)).fetchone()
+
+    # Данные не получены
+    if not data:
+        return False
+
     info = {
         "user_id": data[0],
         "sites": data[1].split(";"),
@@ -39,7 +44,7 @@ def sql_get(user_id):
         "mode": data[3],
         "keywords": data[4].split(";"),
         "price_range": data[5].split(";"),
-        "number_of_responses": int(data[6]),
+        "number_of_responses": data[6],
         "message_frequency": data[7]
     }
     return info
