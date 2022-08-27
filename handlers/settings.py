@@ -3,9 +3,11 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import CallbackQuery
 
+from data import CURRENCIES_SIGNS
 from keyboards.settings import sites_kb, categories_kb, currency_kb, settings_default_kb, prices_kb, \
     responses_kb
 from utils import is_valid
+
 
 
 # Машина состояний
@@ -247,23 +249,28 @@ async def choose_prices(callback, state: FSMContext):
             message_id = (await state.get_data())["message_id"]
 
             text = ''
-            for word in prices:
-                if word is None:
-                    continue
-                text += "🔘 " + word + "\n"
-            else:
-                if text == '':
-                    text = 'Отображать заказы с любой ценой ✅'
+            currency_sign = CURRENCIES_SIGNS[(await state.get_data())["chosen_currency"]]
+            if prices[0] is not None:
+                text += f"🔘 от {prices[0]} {currency_sign}\n"
+            if prices[1] is not None:
+                text += f"🔘 до {prices[1]} {currency_sign}\n"
+            if text == '':
+                text = 'Отображать заказы с любой ценой ✅'
             await message_id.edit_text(f"Напишите ценовой диапазон поиска заказов:\n\n💡 Вам будут показаны "
-                                                 f"заказы только в выбранном вам ценновом диапазоне\. Для отображения "
-                                                 f"заказов с любой ценой нажмите соотвествующую кнопку снизу\.\n\n"
-                                                 f"💡 Для добавления минимальной цены заказа напишите \"от \*цена\*\" и"
-                                                 f" отправьте данное сообщение боту\.\n*Например:*\n_от 500_\n\n"
-                                                 f"💡 Для добавления маскимальной цены заказа напишите \"до \*цена\*\" и"
-                                                 f" отправьте данное сообщение боту\.\n*Например:*\n_до 5000_\n\n"
-                                                 f"*Выбранный вами ценовой диапазон:*\n{text}",
-                                                 parse_mode="MarkDownV2",
-                                                 reply_markup=prices_kb)
+                                       f"заказы только в выбранном вам ценновом диапазоне\. Для отображения "
+                                       f"заказов с любой ценой нажмите соотвествующую кнопку снизу\.\n\n"
+                                       f"💡 Для добавления минимальной цены заказа напишите \"от \*цена\*\" и"
+                                       f" отправьте данное сообщение боту\.\n*Например:*\n_от 500_\n\n"
+                                       f"💡 Для добавления маскимальной цены заказа напишите \"до \*цена\*\" и"
+                                       f" отправьте данное сообщение боту\.\n*Например:*\n_до 5000_\n\n"
+                                       f"*Выбранный вами ценовой диапазон:*\n{text}",
+                                       parse_mode="MarkDownV2",
+                                       reply_markup=prices_kb)
+        elif callback.data == "chosen_any":
+            if any((await state.get_data())["prices"]):
+                callback.data = "first_start"
+                await choose_prices(callback, state)
+            return
 
         elif callback.data == "step_ahead":
             callback.data = "first_start"
@@ -277,10 +284,53 @@ async def choose_prices(callback, state: FSMContext):
             return
 
     else:
-        pass
+        # валидация ввода
+        user_input = callback.text.lower().split()
+        await callback.delete()
+        if len(user_input) != 2 or user_input[0] not in ["от", "до"] or not user_input[1].isdigit() or int(user_input[1]) == 0:
+            return
+
+        user_input[1] = int(user_input[1])
+
+            # обновление данных
+        prices = (await state.get_data())["prices"]
+        if user_input[0] == "от":
+            # если граница ОТ больше ДО
+            if prices[1] and user_input[1] >= prices[1]:
+                return
+
+            prices[0] = user_input[1]
+        else:
+            # если граница ДО меньше ОТ
+            if prices[0] and user_input[1] <= prices[0]:
+                return
+
+            prices[1] = user_input[1]
+
+        await state.update_data(prices=prices)
+        message_id = (await state.get_data())["message_id"]
+
+        text = ''
+
+        currency_sign = CURRENCIES_SIGNS[(await state.get_data())["chosen_currency"]]
+        if prices[0] is not None:
+            text += f"🔘 от {prices[0]} {currency_sign}\n"
+        if prices[1] is not None:
+            text += f"🔘 до {prices[1]} {currency_sign}\n"
+
+        await message_id.edit_text(f"Напишите ценовой диапазон поиска заказов:\n\n💡 Вам будут показаны "
+                                   f"заказы только в выбранном вам ценновом диапазоне\. Для отображения "
+                                   f"заказов с любой ценой нажмите соотвествующую кнопку снизу\.\n\n"
+                                   f"💡 Для добавления минимальной цены заказа напишите \"от \*цена\*\" и"
+                                   f" отправьте данное сообщение боту\.\n*Например:*\n_от 500_\n\n"
+                                   f"💡 Для добавления маскимальной цены заказа напишите \"до \*цена\*\" и"
+                                   f" отправьте данное сообщение боту\.\n*Например:*\n_до 5000_\n\n"
+                                   f"*Выбранный вами ценовой диапазон:*\n{text}",
+                                   parse_mode="MarkDownV2",
+                                   reply_markup=prices_kb)
 
 
-async def choose_responses(callback: CallbackQuery, state: FSMContext):
+async def choose_responses(callback, state: FSMContext):
     if type(callback) == CallbackQuery:
         # удаление ожидания
         await callback.answer()
@@ -299,6 +349,13 @@ async def choose_responses(callback: CallbackQuery, state: FSMContext):
                                                  f"Отображать заказы с любым количеством откликов ✅",
                                                  parse_mode="MarkDownV2",
                                                  reply_markup=responses_kb)
+
+        elif callback.data == "chosen_any":
+            if (await state.get_data())["responses"]:
+                callback.data = "first_start"
+                await choose_responses(callback, state)
+            return
+
         elif callback.data == "settings_done":
             callback.data = "first_start"
             await StatesMachine.next()
@@ -310,7 +367,30 @@ async def choose_responses(callback: CallbackQuery, state: FSMContext):
             return
 
     else:
-        pass
+        # валидация ввода
+        if not callback.text.isdigit() or int(callback.text) == 0:
+            await callback.delete()
+            return
+
+        await state.update_data(responses=int(callback.text))
+        message_id = (await state.get_data())["message_id"]
+
+        await message_id.edit_text(f"Напишите максимальное количество откликов :\n\n💡 Вам *НЕ* будут "
+                                         f"показаны заказы, в которых количество откликов превышает выбранное"
+                                         f"Вами значение\. Для отображения заказов с любым количеством откликов"
+                                         f" нажмите соотвествующую кнопку снизу\.\n\n"
+                                         f"💡 Для добавления маскимального количества откликов отправьте"
+                                         f" сообщение боту, содержащее максимальное число откликов\."
+                                         f"\n*Например:*\n7\n\n"
+                                         f"*Выбранное Вами максимальное значение:*\n"
+                                         f"{int(callback.text)}",
+                                         parse_mode="MarkDownV2",
+                                         reply_markup=responses_kb)
+
+        await callback.delete()
+
+
+
 
 
 # Регистрация хендлеров
