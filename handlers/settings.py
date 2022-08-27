@@ -8,6 +8,7 @@ from keyboards.settings import sites_kb, categories_kb, currency_kb, settings_de
 from utils import is_valid
 
 
+# Машина состояний
 class StatesMachine(StatesGroup):
     waiting_for_sites = State()
     waiting_for_categories = State()
@@ -29,11 +30,13 @@ async def setup_settings(callback: CallbackQuery, state: FSMContext):
 
 # выбор биржи
 async def choose_sites(callback: CallbackQuery, state: FSMContext):
+    # удаление ожидания
+    await callback.answer()
+
     # первый запуск функции
     if callback.data == "first_start":
         await state.update_data(chosen_sites=[])
 
-    await callback.answer()
     chosen_sites = (await state.get_data())["chosen_sites"]
 
     # при нажатии на сайт
@@ -51,18 +54,22 @@ async def choose_sites(callback: CallbackQuery, state: FSMContext):
         await choose_categories(callback, state)
         return
 
+    # отображение сообщения
     await callback.message.edit_text("Выберите сайты:", reply_markup=sites_kb(chosen_sites))
 
 
 # выбор категорий
 async def choose_categories(callback: CallbackQuery, state: FSMContext):
+    # удаление ожидания
+    await callback.answer()
+
     # первый запуск функции
     if callback.data == "first_start":
         await state.update_data(chosen_category=[])
 
     chosen_category = (await state.get_data())["chosen_category"]
-    await callback.answer()
 
+    # при нажатии на категорию
     if callback.data.startswith("chosen"):
         if callback.data.replace("chosen ", "") == chosen_category:
             await callback.answer()
@@ -71,80 +78,99 @@ async def choose_categories(callback: CallbackQuery, state: FSMContext):
             chosen_category = callback.data.replace("chosen ", "")
             await state.update_data(chosen_category=chosen_category)
 
+    # при нажатии "Дальше"
     elif callback.data == "step_ahead":
         callback.data = "first_start"
         await StatesMachine.next()
         await choose_keywords(callback, state)
         return
 
+    # при нажатии "Назад"
     elif callback.data == "step_back":
         callback.data = "returned"
         await StatesMachine.previous()
         await choose_sites(callback, state)
         return
 
+    # отображение сообщения
     await callback.message.edit_text("Выберите категории:", reply_markup=categories_kb(chosen_category))
 
 
 async def choose_keywords(callback, state: FSMContext):
+    # проверка, функция вызвана сообщением или инлайн кнопкой
     if type(callback) == CallbackQuery:
+        # удаление ожидания
+        await callback.answer()
+
         # первый запуск функции
         if callback.data == "first_start":
             await state.update_data(keywords=[])
-            keywords = (await state.get_data())["keywords"]
-            keywords_message_id = \
+            message_id = \
                 await callback.message.edit_text(f"Напишите ключевые слова:\n\n💡 Используйте слова или словосочетания"
                                                  f" без спецсимволов\. Только буквы, цифры и пробелы\n\n💡 Для добавления "
                                                  f"отправьте каждое ключевое слово отдельным сообщением\.\n\n"
                                                  f"💡 Для удаления отправьте ключевое слово, которое хотите удалить\n\n"
                                                  f"Ваши ключевые слова:\n", parse_mode="MarkDownV2",
                                                  reply_markup=settings_default_kb)
-            await state.update_data(keywords_message_id=keywords_message_id)
 
+            await state.update_data(message_id=message_id)
+
+        # вызов функции при возврате
         elif callback.data == "returned":
             keywords = (await state.get_data())["keywords"]
-            keywords_message_id = (await state.get_data())["keywords_message_id"]
+            message_id = (await state.get_data())["message_id"]
 
             text = ''
             for word in keywords:
                 text += "🔘 " + word + "\n"
-            await keywords_message_id.edit_text(f"Напишите ключевые слова:\n\n💡 Используйте слова или словосочетания"
+            await message_id.edit_text(f"Напишите ключевые слова:\n\n💡 Используйте слова или словосочетания"
                                                 f" без спецсимволов\. Только буквы, цифры и пробелы\n\n💡 Для добавления "
                                                 f"отправьте каждое ключевое слово отдельным сообщением\.\n\n"
                                                 f"💡 Для удаления отправьте ключевое слово, которое хотите удалить\n\n"
                                                 f"Ваши ключевые слова:\n*{text}*", parse_mode="MarkDownV2",
                                                 reply_markup=settings_default_kb)
 
+        # при нажатии "Дальше"
         elif callback.data == "step_ahead":
             callback.data = "first_start"
             await StatesMachine.next()
             await choose_currency(callback, state)
             return
 
+        # при нажатии "Назад"
         elif callback.data == "step_back":
             callback.data = "returned"
             await StatesMachine.previous()
             await choose_categories(callback, state)
             return
+
+    # при срабатывании функции в ответ на сообщение.
     else:
-        keywords_message_id = (await state.get_data())["keywords_message_id"]
+        message_id = (await state.get_data())["message_id"]
         keywords = (await state.get_data())["keywords"]
+
+        # проверка ввода
         if not is_valid(callback.text):
             await callback.delete()
             return
+
+        # обработка ввода
         callback.text = callback.text.lower()
         if callback.text in keywords:
+            # если слово уже в списке, удаляем его
             keywords.remove(callback.text)
         else:
+            # если слова нет в списке, добавляем его
             keywords.append(callback.text)
         await state.update_data(keywords=keywords)
         await callback.delete()
 
+        # отображение сообщения
         text = ''
         for word in keywords:
             text += "🔘 " + word + "\n"
 
-        await keywords_message_id.edit_text(f"Напишите ключевые слова:\n\n💡 Используйте слова или словосочетания"
+        await message_id.edit_text(f"Напишите ключевые слова:\n\n💡 Используйте слова или словосочетания"
                                    f" без спецсимволов\. Только буквы, цифры и пробелы\n\n💡 Для добавления "
                                    f"отправьте каждое ключевое слово отдельным сообщением\.\n\n"
                                    f"💡 Для удаления отправьте ключевое слово, которое хотите удалить\n\n"
@@ -153,35 +179,38 @@ async def choose_keywords(callback, state: FSMContext):
 
 
 async def choose_currency(callback: CallbackQuery, state: FSMContext):
+    # удаление ожидания
+    await callback.answer()
+
     # первый запуск функции
     if callback.data == "first_start":
         await state.update_data(chosen_currency=None)
 
     chosen_currency = (await state.get_data())["chosen_currency"]
-    await callback.answer()
 
     # при нажатии на валюту
     if callback.data.startswith("chosen"):
         if callback.data.replace("chosen ", "") == chosen_currency:
-            await callback.answer()
             return
         else:
             chosen_currency = callback.data.replace("chosen ", "")
             await state.update_data(chosen_currency=chosen_currency)
 
-    # при нажатии "дальше"
+    # при нажатии "Дальше"
     elif callback.data == "step_ahead":
         callback.data = "first_start"
         await StatesMachine.next()
         await choose_prices(callback, state)
         return
 
+    # при нажатии "Назад"
     elif callback.data == "step_back":
         callback.data = "returned"
         await StatesMachine.previous()
         await choose_keywords(callback, state)
         return
 
+    # отображение текста
     await callback.message.edit_text("Выберите валюту, в которой будут отображаться заказы:\n\n"
                                      "💡 При отображении заказов с различных фриланс бирж, цена будет конвертироваться "
                                      "в выбранную вами валюту по актуальному курсу\.\n\n"
@@ -193,10 +222,13 @@ async def choose_currency(callback: CallbackQuery, state: FSMContext):
 
 async def choose_prices(callback, state: FSMContext):
     if type(callback) == CallbackQuery:
+        # удаление ожидания
+        await callback.answer()
+
         if callback.data == "first_start":
             await state.update_data(prices=[None, None])
 
-            prices_message_id = \
+            message_id = \
                 await callback.message.edit_text(f"Напишите ценовой диапазон поиска заказов:\n\n💡 Вам будут показаны "
                                                  f"заказы только в выбранном вам ценновом диапазоне\. Для отображения "
                                                  f"заказов с любой ценой нажмите соотвествующую кнопку снизу\.\n\n"
@@ -207,11 +239,12 @@ async def choose_prices(callback, state: FSMContext):
                                                  f"*Выбранный вами ценовой диапазон:*\nОтображать заказы с любой ценой ✅",
                                                  parse_mode="MarkDownV2",
                                                  reply_markup=prices_kb)
-            await state.update_data(prices_message_id=prices_message_id)
+
+            await state.update_data(message_id=message_id)
 
         elif callback.data == "returned":
             prices = (await state.get_data())["prices"]
-            prices_message_id = (await state.get_data())["prices_message_id"]
+            message_id = (await state.get_data())["message_id"]
 
             text = ''
             for word in prices:
@@ -221,7 +254,7 @@ async def choose_prices(callback, state: FSMContext):
             else:
                 if text == '':
                     text = 'Отображать заказы с любой ценой ✅'
-            await prices_message_id.edit_text(f"Напишите ценовой диапазон поиска заказов:\n\n💡 Вам будут показаны "
+            await message_id.edit_text(f"Напишите ценовой диапазон поиска заказов:\n\n💡 Вам будут показаны "
                                                  f"заказы только в выбранном вам ценновом диапазоне\. Для отображения "
                                                  f"заказов с любой ценой нажмите соотвествующую кнопку снизу\.\n\n"
                                                  f"💡 Для добавления минимальной цены заказа напишите \"от \*цена\*\" и"
@@ -249,6 +282,8 @@ async def choose_prices(callback, state: FSMContext):
 
 async def choose_responses(callback: CallbackQuery, state: FSMContext):
     if type(callback) == CallbackQuery:
+        # удаление ожидания
+        await callback.answer()
         if callback.data == "first_start":
             await state.update_data(responses=None)
 
